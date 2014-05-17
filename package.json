@@ -1,0 +1,52 @@
+{
+  "name": "meanstack-buildpack-coffee",
+  "version": "0.0.1",
+  "author": "Jure Žvelc <jzvelc@gmail.com>",
+  "description": "CoffeeScript buildpack for meanstack-framework.",
+  "keywords": [
+    "mean",
+    "buildpack",
+    "mongo",
+    "express",
+    "angular"
+  ],
+  "licenses": [{
+    "type": "MIT",
+    "url": "https://github.com/meanstackjs/meanstack-buildpack-coffee/blob/master/LICENSE"
+  }],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/meanstackjs/meanstack-buildpack-coffee.git"
+  },
+  "bugs": {
+    "url": "https://github.com/meanstackjs/meanstack-buildpack-coffee/issues"
+  },
+  "engines": {
+    "node": ">= 0.8.0"
+  },
+  "main": "lib/buildpack",
+  "scripts": {
+    "prepublish": "coffee --bare --compile --output lib src"
+  },
+  "dependencies": {
+    "grunt-contrib-copy": "0.5.x",
+    "grunt-contrib-watch": "0.6.x",
+    "grunt-contrib-coffee": "0.10.x",
+    "grunt-contrib-uglify": "0.4.x",
+    "grunt-contrib-clean": "0.5.x",
+    "grunt-contrib-less": "0.11.x",
+    "grunt-contrib-cssmin": "0.9.x",
+    "grunt-contrib-htmlmin": "0.2.x",
+    "grunt-easyassets": "git+https://github.com/jzvelc/grunt-easyassets.git",
+    "grunt-nodemon": "0.2.x",
+    "grunt-concurrent": "0.5.x",
+    "grunt-coffeelint": "0.0.x",
+    "grunt-text-replace": "0.3.x",
+    "grunt-ngmin": "0.0.x",
+    "grunt-angular-templates": "0.5.x",
+    "grunt-vhosted": "git+https://github.com/jzvelc/grunt-vhosted.git"
+  },
+  "devDependencies": {
+    "coffee-script": "1.7.x"
+  }
+}
