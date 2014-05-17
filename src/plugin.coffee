@@ -2,6 +2,13 @@ path = require 'path'
 fs = require 'fs'
 
 module.exports = (projectdir, grunt, mean) ->
+  if fs.existsSync '../../package.json'
+    pkg = grunt.file.readJSON('../../package.json')
+    if not pkg.mean?
+      grunt.fail.fatal 'No MEAN Stack host app found.'
+  else
+    grunt.fail.fatal 'No MEAN Stack host app found.'
+
   mean.npmtasks = [
     'grunt-contrib-copy',
     'grunt-contrib-coffee',
