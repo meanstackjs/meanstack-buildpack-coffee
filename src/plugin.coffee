@@ -112,7 +112,7 @@ module.exports = (projectdir, grunt, mean) ->
   mean.config.watch['assets'].options.livereload = false
   mean.config.watch['assets'].tasks.push 'copy:plugins'
 
-  mean.tasks.install.splice(mean.tasks.install.indexOf('clean:distribution') + 1, 0, 'clean:plugins')
+  mean.tasks.install.splice(mean.tasks.install.indexOf('clean:release') + 1, 0, 'clean:plugins')
   mean.tasks.install.splice(mean.tasks.install.indexOf('vhosted'), 1)
   mean.tasks.install.splice(mean.tasks.install.indexOf('clean:plugins') + 1, 0, 'update-assets')
   mean.tasks.install.splice(mean.tasks.install.indexOf('clean:plugins') + 1, 0, 'copy:plugins')

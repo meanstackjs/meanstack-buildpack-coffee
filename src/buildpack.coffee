@@ -51,7 +51,7 @@ module.exports = (projectdir, grunt, meanstack, type) ->
     'easyassets:version-other',
     'copy:easyassets-other',
     'easyassets:replace-production',
-    'clean:distribution',
+    'clean:release',
     'nodemon:production'
   ]
 
@@ -75,7 +75,7 @@ module.exports = (projectdir, grunt, meanstack, type) ->
     'easyassets:version-other',
     'copy:easyassets-other',
     'easyassets:replace-production',
-    'clean:distribution'
+    'clean:release'
   ]
 
   # Build
@@ -299,10 +299,10 @@ module.exports = (projectdir, grunt, meanstack, type) ->
         '!public/vendor/**',
         '!public/plugins/**'
       ]
-      'distribution': [
+      'release': [
         'public/**/*',
         '!public/*.*',
-        '!public/dist/**',
+        '!public/release/**',
         '!public/vendor/**',
         '!public/plugins/**'
       ]
