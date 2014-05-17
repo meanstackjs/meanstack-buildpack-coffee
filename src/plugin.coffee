@@ -2,8 +2,6 @@ path = require 'path'
 fs = require 'fs'
 
 module.exports = (projectdir, grunt, mean) ->
-  valid = true
-
   mean.npmtasks = [
     'grunt-contrib-copy',
     'grunt-contrib-coffee',
@@ -130,7 +128,6 @@ module.exports = (projectdir, grunt, mean) ->
   # Protect againts app integration
   protect = ->
     grunt.log.writeln 'No MEAN Stack host app found, skipping integration.'
-    valid = false
     mean.config.less.assets.options.paths.splice(1, 1)
     mean.tasks.install.splice(mean.tasks.install.indexOf('clean:update-assets'), 1)
     mean.tasks.install.splice(mean.tasks.install.indexOf('clean:plugins'), 1)
