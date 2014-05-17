@@ -125,6 +125,9 @@ module.exports = (projectdir, grunt, mean) ->
   mean.tasks.develop.splice(mean.tasks.develop.indexOf('clean:plugins') + 1, 0, 'update-assets')
   mean.tasks.develop.splice(mean.tasks.develop.indexOf('clean:plugins') + 1, 0, 'copy:plugins')
 
+  # Register integrate task
+  grunt.registerTask 'integrate', ['clean:plugins', 'copy:plugins', 'update-assets']
+
   # Protect againts app integration
   protect = ->
     grunt.log.writeln 'No MEAN Stack host app found, skipping integration.'
@@ -136,6 +139,7 @@ module.exports = (projectdir, grunt, mean) ->
     mean.tasks.develop.splice(mean.tasks.develop.indexOf('clean:plugins'), 1)
     mean.tasks.develop.splice(mean.tasks.develop.indexOf('copy:plugins'), 1)
     mean.tasks.develop.splice(mean.tasks.develop.indexOf('watch'), 1)
+    grunt.registerTask 'integrate', []
   if fs.existsSync '../../package.json'
     pkg = grunt.file.readJSON('../../package.json')
     if not pkg.mean?
