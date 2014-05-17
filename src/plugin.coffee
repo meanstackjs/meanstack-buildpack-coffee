@@ -2,12 +2,7 @@ path = require 'path'
 fs = require 'fs'
 
 module.exports = (projectdir, grunt, mean) ->
-  if fs.existsSync '../../package.json'
-    pkg = grunt.file.readJSON('../../package.json')
-    if not pkg.mean?
-      grunt.fail.fatal 'No MEAN Stack host app found.'
-  else
-    grunt.fail.fatal 'No MEAN Stack host app found.'
+  valid = true
 
   mean.npmtasks = [
     'grunt-contrib-copy',
@@ -109,6 +104,7 @@ module.exports = (projectdir, grunt, mean) ->
       dest: '../../public/plugins/<%= pkg.name %>/'
     ]
 
+  # Modify watch config
   mean.config.watch['server-views'].options.livereload = false
   mean.config.watch['angular-coffee'].options.livereload = false
   mean.config.watch['angular-coffee'].tasks.push 'copy:plugins'
@@ -119,14 +115,35 @@ module.exports = (projectdir, grunt, mean) ->
   mean.config.watch['assets'].options.livereload = false
   mean.config.watch['assets'].tasks.push 'copy:plugins'
 
+  # Modify install task
   mean.tasks.install.splice(mean.tasks.install.indexOf('clean:release') + 1, 0, 'clean:plugins')
   mean.tasks.install.splice(mean.tasks.install.indexOf('vhosted'), 1)
   mean.tasks.install.splice(mean.tasks.install.indexOf('clean:plugins') + 1, 0, 'update-assets')
   mean.tasks.install.splice(mean.tasks.install.indexOf('clean:plugins') + 1, 0, 'copy:plugins')
 
+  # Modify develop task
   mean.tasks.develop.splice(mean.tasks.develop.indexOf('concurrent:development'), 1, 'clean:plugins')
   mean.tasks.develop.splice(mean.tasks.develop.indexOf('clean:plugins') + 1, 0, 'watch')
   mean.tasks.develop.splice(mean.tasks.develop.indexOf('clean:plugins') + 1, 0, 'update-assets')
   mean.tasks.develop.splice(mean.tasks.develop.indexOf('clean:plugins') + 1, 0, 'copy:plugins')
+
+  # Protect againts app integration
+  protect = ->
+    grunt.log.writeln 'No MEAN Stack host app found, skipping integration.'
+    valid = false
+    mean.config.less.assets.options.paths.splice(1, 1)
+    mean.tasks.install.splice(mean.tasks.install.indexOf('clean:update-assets'), 1)
+    mean.tasks.install.splice(mean.tasks.install.indexOf('clean:plugins'), 1)
+    mean.tasks.install.splice(mean.tasks.install.indexOf('copy:plugins'), 1)
+    mean.tasks.develop.splice(mean.tasks.develop.indexOf('clean:update-assets'), 1)
+    mean.tasks.develop.splice(mean.tasks.develop.indexOf('clean:plugins'), 1)
+    mean.tasks.develop.splice(mean.tasks.develop.indexOf('copy:plugins'), 1)
+    mean.tasks.develop.splice(mean.tasks.develop.indexOf('watch'), 1)
+  if fs.existsSync '../../package.json'
+    pkg = grunt.file.readJSON('../../package.json')
+    if not pkg.mean?
+      protect()
+  else
+    protect()
 
   return mean
