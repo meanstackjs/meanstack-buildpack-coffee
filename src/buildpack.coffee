@@ -297,14 +297,16 @@ module.exports = (projectdir, grunt, meanstack, type) ->
         'lib/',
         'public/**/*',
         '!public/vendor/**',
-        '!public/plugins/**'
+        '!public/plugins/**',
+        '!public/other/**'
       ]
       'release': [
         'public/**/*',
         '!public/*.*',
         '!public/release/**',
         '!public/vendor/**',
-        '!public/plugins/**'
+        '!public/plugins/**',
+        '!public/other/**'
       ]
     uglify:
       options:
