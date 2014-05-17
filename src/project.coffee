@@ -49,11 +49,7 @@ module.exports = (projectdir, grunt, mean) ->
       mean.config.copy['assets'].files[0].src = path.relative \
         mean.config.copy['assets'].files[0].cwd, filepath
 
-    if action is 'added' or action is 'deleted'
-      if target isnt 'easyassets'
-        stat = fs.statSync('assets.json')
-        fs.utimesSync('assets.json', stat.atime, new Date())
-      else
-        fs.writeFileSync '.tmp/restart', 'restart'
+    if action is 'added' or action is 'deleted' or target is 'easyassets'
+      fs.writeFileSync '.tmp/restart', 'restart'
 
   return mean
