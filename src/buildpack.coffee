@@ -286,8 +286,7 @@ module.exports = (projectdir, grunt, meanstack, type) ->
         '.assets',
         'lib/',
         'public/',
-        '.tmp/',
-        'node_modules/'
+        '.tmp/'
       ]
       'build': [
         'app.js',
