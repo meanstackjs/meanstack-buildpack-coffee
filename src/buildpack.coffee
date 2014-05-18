@@ -414,7 +414,7 @@ module.exports = (projectdir, grunt, meanstack, type) ->
   mean.config.ngtemplates[name] = {}
   mean.config.ngtemplates[name] =
     options:
-      prefix: 'public/'
+      prefix: 'public/js/'
     cwd: 'public/js/'
     src: '**/*.html'
     dest: 'public/js/partials.js'
