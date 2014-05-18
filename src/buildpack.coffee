@@ -168,7 +168,7 @@ module.exports = (projectdir, grunt, meanstack, type) ->
           spawn: false
           livereload: true
       'angular-views':
-        files: ['src/client/views/**/*.*']
+        files: ['src/client/**/*.html']
         tasks: ['copy:angular-views']
         options:
           spawn: false
@@ -263,9 +263,9 @@ module.exports = (projectdir, grunt, meanstack, type) ->
       'angular-views':
         files: [
           expand: true
-          cwd: 'src/client/views/'
-          src: '**/*.*'
-          dest: 'public/views/'
+          cwd: 'src/client/'
+          src: '**/*.html'
+          dest: 'public/js/'
         ]
       'assets':
         files: [
@@ -357,9 +357,9 @@ module.exports = (projectdir, grunt, meanstack, type) ->
           removeStyleLinkTypeAttributes: true
         files: [
           expand: true
-          cwd: 'src/client/views/'
-          src: '**/*.*'
-          dest: 'public/views/'
+          cwd: 'src/client/'
+          src: '**/*.html'
+          dest: 'public/js/'
         ]
     easyassets:
       options:
@@ -415,8 +415,8 @@ module.exports = (projectdir, grunt, meanstack, type) ->
   mean.config.ngtemplates[name] =
     options:
       prefix: 'public/'
-    cwd: 'public/'
-    src: 'views/**/*.html'
+    cwd: 'public/js/'
+    src: '**/*.html'
     dest: 'public/js/partials.js'
 
   if type is 'project'
