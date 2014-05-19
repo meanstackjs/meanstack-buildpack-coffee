@@ -243,6 +243,9 @@ module.exports = (projectdir, grunt, meanstack, type) ->
           'server.js': 'server.coffee'
           'vhosts.js': 'vhosts.coffee'
     coffeelint:
+      options:
+        'max_line_length':
+          level: 'ignore'
       'server': ['src/server/**/*.coffee']
       'angular': ['src/client/**/*.coffee']
     copy:
