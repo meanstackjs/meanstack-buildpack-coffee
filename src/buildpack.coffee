@@ -151,7 +151,7 @@ module.exports = (projectdir, grunt, meanstack, type) ->
           spawn: false
           livereload: false
       'server-views':
-        files: ['src/server/views/**/*.*']
+        files: ['src/server/**/*.*', '!src/server/**/*.coffee']
         tasks: []
         options:
           spawn: false
@@ -252,9 +252,9 @@ module.exports = (projectdir, grunt, meanstack, type) ->
       'server-views':
         files: [
           expand: true
-          cwd: 'src/server/views/'
-          src: '**/*.*'
-          dest: 'lib/server/views/'
+          cwd: 'src/server/'
+          src: ['**/*.*', '!**/*.coffee']
+          dest: 'lib/server/'
         ]
       'angular-coffee':
         files: [

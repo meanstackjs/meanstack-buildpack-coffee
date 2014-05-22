@@ -25,7 +25,10 @@ module.exports = (projectdir, grunt, mean) ->
       mean.config.assets = grunt.file.readJSON 'assets.json'
 
     if target is 'server-coffee'
-      mean.config.coffeelint.server = filepath
+      if fs.lstatSync(filepath).isDirectory()
+        mean.config.coffeelint.server = []
+      else
+        mean.config.coffeelint.server = filepath
 
     else if target is 'angular-coffee'
       mean.config.coffeelint.angular = filepath
