@@ -21,13 +21,11 @@ module.exports = (projectdir, grunt, meanstack, type) ->
     'copy:assets',
     'copy:angular-views',
     'less',
-    'easyassets:version-css',
     'coffeelint:server',
     'coffeelint:angular',
     'coffee:angular-development',
     'copy:angular-coffee',
     'replace',
-    'easyassets:version-js',
     'easyassets:replace-development',
     'concurrent:development'
   ]
@@ -367,7 +365,6 @@ module.exports = (projectdir, grunt, meanstack, type) ->
     easyassets:
       options:
         dumpvar: 'assets'
-        prefix: 'public/'
       'version-js':
         assets: '<%= assets %>'
         options:
@@ -389,7 +386,6 @@ module.exports = (projectdir, grunt, meanstack, type) ->
           debug: false
           dumpfile: '.assets'
           ignore: []
-          webroot: 'public/'
           replace: [
             ignore: ['public/vendor/**/*', 'public/plugins/**/*']
             src: 'other'
@@ -401,7 +397,6 @@ module.exports = (projectdir, grunt, meanstack, type) ->
           debug: true
           dumpfile: '.assets'
           ignore: []
-          webroot: 'public/'
           replace: [
             ignore: ['public/vendor/**/*', 'public/plugins/**/*']
             src: 'other'
