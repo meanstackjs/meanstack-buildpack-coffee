@@ -29,6 +29,7 @@
     "prepublish": "coffee --bare --compile --output lib src"
   },
   "dependencies": {
+    "minimatch": "0.3.x",
     "grunt-contrib-copy": "0.5.x",
     "grunt-contrib-watch": "0.6.x",
     "grunt-contrib-coffee": "0.10.x",
@@ -44,7 +45,8 @@
     "grunt-text-replace": "0.3.x",
     "grunt-ngmin": "0.0.x",
     "grunt-angular-templates": "0.5.x",
-    "grunt-vhosted": "git+https://github.com/jzvelc/grunt-vhosted.git"
+    "grunt-vhosted": "git+https://github.com/jzvelc/grunt-vhosted.git",
+    "grunt-supervisor": "0.2.4"
   },
   "devDependencies": {
     "coffee-script": "1.7.x"

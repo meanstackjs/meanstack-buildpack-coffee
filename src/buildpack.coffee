@@ -7,6 +7,11 @@ module.exports = (projectdir, grunt, meanstack, type) ->
   # Create tmp dir
   if not fs.existsSync "#{projectdir}/.tmp"
     fs.mkdirSync "#{projectdir}/.tmp"
+  fs.writeFileSync '.tmp/reload', 'reload'
+  fs.writeFileSync '.tmp/restart', 'restart'
+
+  grunt.task.registerTask 'restart-nodemon', 'Restarts nodemon.', ->
+    fs.writeFileSync '.tmp/restart', 'restart'
 
   mean = {}
 
@@ -28,6 +33,20 @@ module.exports = (projectdir, grunt, meanstack, type) ->
     'replace',
     'easyassets:replace-development',
     'concurrent:development'
+  ]
+
+  mean.tasks.debug = [
+    'clean:build',
+    'copy:assets',
+    'copy:angular-views',
+    'less',
+    'coffeelint:server',
+    'coffeelint:angular',
+    'coffee:angular-development',
+    'copy:angular-coffee',
+    'replace',
+    'easyassets:replace-development',
+    'concurrent:debug'
   ]
 
   mean.tasks.preview = [
@@ -93,11 +112,11 @@ module.exports = (projectdir, grunt, meanstack, type) ->
     grunt.registerTask 'default', tasks.default
     grunt.registerTask 'init', tasks.init
     grunt.registerTask 'develop', tasks.develop
+    grunt.registerTask 'debug', tasks.debug
     grunt.registerTask 'preview', tasks.preview
     grunt.registerTask 'install', tasks.install
     grunt.event.on 'watch', (action, filepath, target) ->
       mean.watch grunt, mean, action, filepath, target
-
 
   # Config
   mean.config =
@@ -108,6 +127,10 @@ module.exports = (projectdir, grunt, meanstack, type) ->
         tasks: ['nodemon:development', 'watch']
         options:
           logConcurrentOutput: true
+      'debug':
+        tasks: ['nodemon:debug', 'watch']
+        options:
+          logConcurrentOutput: true
       'production':
         tasks: ['nodemon:production']
         options:
@@ -116,11 +139,25 @@ module.exports = (projectdir, grunt, meanstack, type) ->
       'development':
         script: 'server.coffee'
         options:
-          watch: ['src/server/**/*', '.tmp/restart', 'vhosts.coffee']
-          ignore: ['src/server/views/**/*']
-          ext: 'coffee,html,json'
-          nodeArgs: ['--nodejs', '--debug'],
-          delay: 1
+          watch: ['.tmp/restart', 'vhosts.coffee']
+          delay: 0
+          cwd: projectdir
+          env:
+            NODE_ENV: 'development'
+            PORT: '3000'
+          callback: (nodemon) ->
+            nodemon.on 'log', (event) ->
+              console.log event.colour
+            nodemon.on 'restart', ->
+              setTimeout ->
+                fs.writeFileSync '.tmp/reload', 'reload'
+              , 1000
+      'debug':
+        script: 'server.coffee'
+        options:
+          watch: ['.tmp/restart', 'vhosts.coffee']
+          nodeArgs: ['--nodejs', '--debug']
+          delay: 0
           cwd: projectdir
           env:
             NODE_ENV: 'development'
@@ -144,7 +181,7 @@ module.exports = (projectdir, grunt, meanstack, type) ->
     watch:
       'server-coffee':
         files: ['src/server/**/*.coffee']
-        tasks: ['coffeelint:server']
+        tasks: ['coffeelint:server', 'restart-nodemon']
         options:
           spawn: false
           livereload: false
@@ -191,7 +228,8 @@ module.exports = (projectdir, grunt, meanstack, type) ->
           'easyassets:version-js',
           'easyassets:version-css',
           'easyassets:version-other',
-          'easyassets:replace-development'
+          'easyassets:replace-development',
+          'restart-nodemon'
         ]
         options:
           spawn: false
