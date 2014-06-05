@@ -1,57 +1,101 @@
 path = require 'path'
 fs = require 'fs'
+minimatch = require 'minimatch'
 
-module.exports = (projectdir, grunt, meanstack, type) ->
-  reldir = path.relative(__dirname, projectdir)
+module.exports = (projectDir, grunt, master) ->
+  reldir = path.relative(__dirname, projectDir)
+
+  # Path to master
+  if master?
+    master = path.relative(projectDir, path.resolve(master))
+  else
+    master = '../..'
 
   # Create tmp dir
-  if not fs.existsSync "#{projectdir}/.tmp"
-    fs.mkdirSync "#{projectdir}/.tmp"
+  if not fs.existsSync "#{projectDir}/.tmp"
+    fs.mkdirSync "#{projectDir}/.tmp"
   fs.writeFileSync '.tmp/reload', 'reload'
   fs.writeFileSync '.tmp/restart', 'restart'
 
+  if fs.existsSync "#{master}/package.json"
+    slave = true
+  else
+    slave = false
+
   grunt.task.registerTask 'restart-nodemon', 'Restarts nodemon.', ->
-    fs.writeFileSync '.tmp/restart', 'restart'
+    if slave
+      fs.writeFileSync "#{master}/.tmp/restart", 'restart'
+    else
+      fs.writeFileSync '.tmp/restart', 'restart'
 
-  mean = {}
+  grunt.task.registerTask 'reload-browser', 'Reloads browser.', ->
+    if slave
+      fs.writeFileSync "#{master}/.tmp/reload", 'reload'
 
-  mean.tasks = {}
+  buildpack = {}
 
-  mean.tasks.default = ['install']
+  buildpack.npmtasks = [
+    'grunt-contrib-copy',
+    'grunt-contrib-coffee',
+    'grunt-contrib-watch',
+    'grunt-contrib-uglify',
+    'grunt-contrib-clean',
+    'grunt-contrib-less',
+    'grunt-contrib-cssmin',
+    'grunt-contrib-htmlmin',
+    'grunt-coffeelint',
+    'grunt-text-replace',
+    'grunt-easyassets',
+    'grunt-angular-templates',
+    'grunt-nodemon',
+    'grunt-concurrent',
+    'grunt-vhosted',
+    'grunt-supervisor'
+  ]
 
-  mean.tasks.init = ['clean:init']
+  buildpack.tasks = {}
 
-  mean.tasks.develop = [
+  buildpack.tasks.default = ['install']
+
+  buildpack.tasks.init = ['clean:init']
+
+  buildpack.tasks.develop = [
     'clean:build',
+    'read-assets',
     'copy:assets',
+    'copy:server-views',
     'copy:angular-views',
     'less',
     'coffeelint:server',
+    'coffee:server',
     'coffeelint:angular',
-    'coffee:angular-development',
+    'coffee:angular',
     'copy:angular-coffee',
     'replace',
-    'easyassets:replace-development',
+    'easyassets:parse',
     'concurrent:development'
   ]
 
-  mean.tasks.debug = [
+  buildpack.tasks.debug = [
     'clean:build',
+    'read-assets',
     'copy:assets',
+    'copy:server-views',
     'copy:angular-views',
     'less',
     'coffeelint:server',
+    'coffee:server',
     'coffeelint:angular',
-    'coffee:angular-development',
+    'coffee:angular',
     'copy:angular-coffee',
     'replace',
-    'easyassets:replace-development',
+    'easyassets:parse',
     'concurrent:debug'
   ]
 
-  mean.tasks.preview = [
+  buildpack.tasks.preview = [
     'clean:build',
-    'coffee:other',
+    'read-assets',
     'copy:assets',
     'copy:server-views',
     'htmlmin',
@@ -61,21 +105,20 @@ module.exports = (projectdir, grunt, meanstack, type) ->
     'coffeelint:server',
     'coffee:server',
     'coffeelint:angular',
-    'coffee:angular-production',
+    'coffee:angular',
     'ngtemplates',
     'easyassets:version-js',
     'uglify:production',
     'easyassets:version-other',
     'copy:easyassets-other',
-    'easyassets:replace-production',
-    'clean:release',
+    'easyassets:replace',
     'nodemon:production'
   ]
 
-  mean.tasks.install = [
+  buildpack.tasks.install = [
     'vhosted',
     'clean:build',
-    'coffee:other',
+    'read-assets',
     'copy:assets',
     'copy:server-views',
     'htmlmin',
@@ -85,43 +128,49 @@ module.exports = (projectdir, grunt, meanstack, type) ->
     'coffeelint:server',
     'coffee:server',
     'coffeelint:angular',
-    'coffee:angular-production',
+    'coffee:angular',
     'ngtemplates',
     'easyassets:version-js',
     'uglify:production',
     'easyassets:version-other',
     'copy:easyassets-other',
-    'easyassets:replace-production',
-    'clean:release'
+    'easyassets:replace'
   ]
 
   # Build
-  mean.build = (config, tasks) ->
+  buildpack.build = (config, tasks) ->
     if not config?
-      config = mean.config
+      config = buildpack.config
     if not tasks?
-      tasks = mean.tasks
-    grunt.initConfig mean.config
+      tasks = buildpack.tasks
+    grunt.initConfig buildpack.config
 
     # Load NPM tasks
     grunt.file.setBase path.resolve(__dirname, '../')
-    for npmtask in mean.npmtasks
+    for npmtask in buildpack.npmtasks
       grunt.loadNpmTasks npmtask
-    grunt.file.setBase projectdir
+    grunt.file.setBase projectDir
+
+    grunt.registerTask 'read-assets', 'Loads asset config.', ->
+      buildpack.config.assets = grunt.file.readJSON "#{projectDir}/src/assets/assets.json"
 
     grunt.registerTask 'default', tasks.default
     grunt.registerTask 'init', tasks.init
-    grunt.registerTask 'develop', tasks.develop
+    grunt.registerTask 'develop', ->
+      if slave
+        tasks.develop.splice tasks.develop.indexOf('concurrent:development'), 1
+        tasks.develop.push 'watch'
+
+      grunt.task.run tasks.develop
     grunt.registerTask 'debug', tasks.debug
     grunt.registerTask 'preview', tasks.preview
     grunt.registerTask 'install', tasks.install
     grunt.event.on 'watch', (action, filepath, target) ->
-      mean.watch grunt, mean, action, filepath, target
+      buildpack.watch grunt, buildpack, action, filepath, target
 
   # Config
-  mean.config =
+  buildpack.config =
     pkg: grunt.file.readJSON 'package.json'
-    assets: grunt.file.readJSON 'assets.json'
     concurrent:
       'development':
         tasks: ['nodemon:development', 'watch']
@@ -139,112 +188,97 @@ module.exports = (projectdir, grunt, meanstack, type) ->
       'development':
         script: 'server.coffee'
         options:
-          watch: ['.tmp/restart', 'vhosts.coffee']
+          watch: ['.tmp/restart']
           delay: 0
-          cwd: projectdir
+          cwd: projectDir
           env:
             NODE_ENV: 'development'
             PORT: '3000'
           callback: (nodemon) ->
             nodemon.on 'log', (event) ->
               console.log event.colour
-            nodemon.on 'restart', ->
-              setTimeout ->
-                fs.writeFileSync '.tmp/reload', 'reload'
-              , 1000
       'debug':
         script: 'server.coffee'
         options:
-          watch: ['.tmp/restart', 'vhosts.coffee']
+          watch: ['.tmp/restart']
           nodeArgs: ['--nodejs', '--debug']
           delay: 0
-          cwd: projectdir
+          cwd: projectDir
           env:
             NODE_ENV: 'development'
             PORT: '3000'
           callback: (nodemon) ->
             nodemon.on 'log', (event) ->
               console.log event.colour
-            nodemon.on 'restart', ->
-              setTimeout ->
-                fs.writeFileSync '.tmp/reload', 'reload'
-              , 1000
       'production':
         script: 'server.js'
         options:
           watch: ['!']
           delay: 0
-          cwd: projectdir
+          cwd: projectDir
           env:
             NODE_ENV: 'production'
             PORT: '3000'
     watch:
       'server-coffee':
         files: ['src/server/**/*.coffee']
-        tasks: ['coffeelint:server', 'restart-nodemon']
+        tasks: ['coffeelint:server', 'coffee:server', 'restart-nodemon']
         options:
           spawn: false
           livereload: false
       'server-views':
         files: ['src/server/**/*.*', '!src/server/**/*.coffee']
-        tasks: []
+        tasks: ['copy:server-views', 'reload-browser']
         options:
           spawn: false
-          livereload: true
+          livereload: not slave
       'angular-coffee':
         files: ['src/client/**/*.coffee']
         tasks: [
           'coffeelint:angular',
-          'coffee:angular-development',
+          'coffee:angular',
           'copy:angular-coffee',
-          'replace:sourcemaps'
+          'replace:sourcemaps',
+          'reload-browser'
         ]
         options:
           spawn: false
-          livereload: true
+          livereload: not slave
       'angular-views':
         files: ['src/client/**/*.html']
-        tasks: ['copy:angular-views']
+        tasks: ['copy:angular-views', 'reload-browser']
         options:
           spawn: false
-          livereload: true
+          livereload: not slave
       'less':
         files: ['src/assets/less/**/*.less']
-        tasks: ['less', 'easyassets:replace-development']
+        tasks: ['less', 'reload-browser']
         options:
           spawn: false
-          livereload: true
+          livereload: not slave
       'assets':
         files: [
-          'src/assets/**/*.*'
+          'src/assets/**/*.*',
+          '!src/assets/assets.json'
         ]
-        tasks: ['copy:assets']
+        tasks: ['copy:assets', 'reload-browser']
         options:
           spawn: false
-          livereload: true
+          livereload: not slave
       'easyassets':
-        files: ['assets.json']
+        files: ['src/assets/assets.json']
         tasks: [
-          'easyassets:version-js',
-          'easyassets:version-css',
-          'easyassets:version-other',
-          'easyassets:replace-development',
+          'read-assets',
+          'easyassets:parse',
           'restart-nodemon'
         ]
         options:
           spawn: false
           livereload: false
       'nodemon':
-        files: [
-          '.tmp/reload',
-          'public/**/*',
-          '!public/css/**/*',
-          '!public/js/**/*',
-          '!public/vendor/**/*',
-          '!public/plugins/**/*'
-        ]
+        files: ['.tmp/reload']
         options:
-          livereload: true
+          livereload: not slave
     coffee:
       'server':
         options:
@@ -254,30 +288,15 @@ module.exports = (projectdir, grunt, meanstack, type) ->
         src: ['**/*.coffee']
         dest: 'lib/server/'
         ext: '.js'
-      'angular-production':
-        options:
-          bare: false
-        expand: true
-        cwd: 'src/client/'
-        src: ['**/*.coffee']
-        dest: 'public/js/'
-        ext: '.js'
-      'angular-development':
+      'angular':
         options:
           bare: false
           sourceMap: true
         expand: true
         cwd: 'src/client/'
         src: ['**/*.coffee']
-        dest: 'public/js/'
+        dest: 'public/<%= pkg.name %>/js/'
         ext: '.js'
-      'other':
-        options:
-          bare: true
-        files:
-          'app.js': 'app.coffee'
-          'server.js': 'server.coffee'
-          'vhosts.js': 'vhosts.coffee'
     coffeelint:
       options:
         'max_line_length':
@@ -297,21 +316,21 @@ module.exports = (projectdir, grunt, meanstack, type) ->
           expand: true
           cwd: 'src/client/'
           src: '**/*.coffee'
-          dest: 'public/js/'
+          dest: 'public/<%= pkg.name %>/js/'
         ]
       'angular-views':
         files: [
           expand: true
           cwd: 'src/client/'
           src: '**/*.html'
-          dest: 'public/js/'
+          dest: 'public/<%= pkg.name %>/js/'
         ]
       'assets':
         files: [
           expand: true
           cwd: 'src/assets/'
-          src: ['**/*.*']
-          dest: 'public/'
+          src: ['**/*.*', '!assets.json']
+          dest: 'public/<%= pkg.name %>/'
         ]
       'easyassets-other':
         files: '<%= assets.other %>'
@@ -319,32 +338,22 @@ module.exports = (projectdir, grunt, meanstack, type) ->
       options:
         force: true
       'init': [
-        'app.js',
-        'server.js',
-        'vhosts.js',
-        '.assets',
         'lib/',
         'public/',
         '.tmp/'
       ]
       'build': [
-        'app.js',
-        'server.js',
-        'vhosts.js',
-        '.assets',
         'lib/',
-        'public/**/*',
-        '!public/vendor/**',
-        '!public/plugins/**',
-        '!public/other/**'
+        'public/<%= pkg.name %>/**/*',
+        '!public/<%= pkg.name %>/vendor/**',
+        '!public/<%= pkg.name %>/other/**'
       ]
       'release': [
-        'public/**/*',
-        '!public/*.*',
-        '!public/release/**',
-        '!public/vendor/**',
-        '!public/plugins/**',
-        '!public/other/**'
+        'public/<%= pkg.name %>/**/*',
+        '!public/<%= pkg.name %>/*.*',
+        '!public/<%= pkg.name %>/release/**',
+        '!public/<%= pkg.name %>/vendor/**',
+        '!public/<%= pkg.name %>/other/**'
       ]
     uglify:
       options:
@@ -362,7 +371,7 @@ module.exports = (projectdir, grunt, meanstack, type) ->
         files: '<%= assets.js %>'
     replace:
       'sourcemaps':
-        src: ['public/js/**/*.js.map']
+        src: ['public/<%= pkg.name %>/js/**/*.js.map']
         overwrite: true
         replacements: [
           from: /\s*.*?sourceRoot.*?\,/g
@@ -371,14 +380,14 @@ module.exports = (projectdir, grunt, meanstack, type) ->
     less:
       'assets':
         options:
-          paths: ['src/assets/less/', 'public/vendor/', 'public/plugins/']
+          paths: ['src/assets/less/', 'public/<%= pkg.name %>/vendor/']
           sourceMap: true
           outputSourceFiles: true
           ieCompat: true
         expand: true
         cwd: 'src/assets/less/'
         src: '**/*.less'
-        dest: 'public/css/'
+        dest: 'public/<%= pkg.name %>/css/'
         ext: '.css'
     cssmin:
       'easyassets':
@@ -398,66 +407,97 @@ module.exports = (projectdir, grunt, meanstack, type) ->
           expand: true
           cwd: 'src/client/'
           src: '**/*.html'
-          dest: 'public/js/'
+          dest: 'public/<%= pkg.name %>/js/'
         ]
     easyassets:
       options:
         dumpvar: 'assets'
       'version-js':
         assets: '<%= assets %>'
+        parse: false
         options:
           version: 'js'
           hashlength: 10
       'version-css':
         assets: '<%= assets %>'
+        parse: false
         options:
           version: 'css'
           hashlength: 10
       'version-other':
         assets: '<%= assets %>'
+        parse: false
         options:
           version: 'other'
           hashlength: 10
-      'replace-production':
+      'replace':
         assets: '<%= assets %>'
+        parse: true
         options:
           debug: false
-          dumpfile: '.assets'
+          dumpfile: 'public/<%= pkg.name %>/assets.json'
           ignore: []
           replace: [
-            ignore: ['public/vendor/**/*', 'public/plugins/**/*']
+            ignore: ['public/<%= pkg.name %>/vendor/**/*']
             src: 'other'
             dest: ['css']
           ]
-      'replace-development':
+      'parse':
         assets: '<%= assets %>'
+        parse: true
         options:
           debug: true
-          dumpfile: '.assets'
-          ignore: []
-          replace: [
-            ignore: ['public/vendor/**/*', 'public/plugins/**/*']
-            src: 'other'
-            dest: ['css']
-          ]
+          dumpfile: 'public/<%= pkg.name %>/assets.json'
     vhosted:
-      vhosts: () ->
-        meanstack.project(projectdir, projectdir + '/src/server',
-          '.coffee', null, false).resolve require("#{reldir}/vhosts.coffee")
+      dir: 'vhosts'
 
-  name = mean.config.pkg.name.replace '-', '.'
-  mean.config.ngtemplates = {}
-  mean.config.ngtemplates[name] = {}
-  mean.config.ngtemplates[name] =
+  name = buildpack.config.pkg.name.replace '-', '.'
+  buildpack.config.ngtemplates = {}
+  buildpack.config.ngtemplates[name] = {}
+  buildpack.config.ngtemplates[name] =
     options:
-      prefix: 'public/js/'
-    cwd: 'public/js/'
+      prefix: 'public/<%= pkg.name %>/js/'
+    cwd: 'public/<%= pkg.name %>/js/'
     src: '**/*.html'
-    dest: 'public/js/partials.js'
+    dest: 'public/<%= pkg.name %>/js/partials.js'
 
-  if type is 'project'
-    mean = require('./project')(projectdir, grunt, mean)
-  else if type is 'plugin'
-    mean = require('./plugin')(projectdir, grunt, mean)
+  buildpack.watch = (grunt, buildpack, action, filepath, target) ->
+    if target is 'server-coffee'
+      if fs.lstatSync(filepath).isDirectory()
+        buildpack.config.coffeelint.server = []
+        buildpack.config.coffee.server = []
+      else
+        buildpack.config.coffeelint.server = filepath
+        buildpack.config.coffee['server'].src = path.relative \
+          buildpack.config.coffee['server'].cwd, filepath
 
-  return mean
+    else if target is 'server-views'
+      buildpack.config.copy['server-views'].files[0].src = path.relative \
+        buildpack.config.copy['server-views'].files[0].cwd, filepath
+
+    else if target is 'angular-coffee'
+      buildpack.config.coffeelint.angular = filepath
+      buildpack.config.coffee['angular'].src = path.relative \
+        buildpack.config.coffee['angular'].cwd, filepath
+      buildpack.config.copy['angular-coffee'].files[0].src = path.relative \
+        buildpack.config.copy['angular-coffee'].files[0].cwd, filepath
+      mapfilepath = path.join 'public/js/',
+        path.relative('src/client/', filepath).replace('.coffee', '.js.map')
+      buildpack.config.replace['sourcemaps'].src = mapfilepath
+
+    else if target is 'angular-views'
+      buildpack.config.copy['angular-views'].files[0].src = path.relative \
+        buildpack.config.copy['angular-views'].files[0].cwd, filepath
+
+    else if target is 'less'
+      buildpack.config.less['assets'].src = path.relative \
+        buildpack.config.less['assets'].cwd, filepath
+
+    else if target is 'assets'
+      buildpack.config.copy['assets'].files[0].src = path.relative \
+        buildpack.config.copy['assets'].files[0].cwd, filepath
+
+    if action is 'added' or action is 'deleted'
+      fs.writeFileSync '.tmp/restart', 'restart'
+
+  return buildpack
