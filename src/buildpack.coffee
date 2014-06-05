@@ -160,7 +160,6 @@ module.exports = (projectDir, grunt, master) ->
       if slave
         tasks.develop.splice tasks.develop.indexOf('concurrent:development'), 1
         tasks.develop.push 'watch'
-
       grunt.task.run tasks.develop
     grunt.registerTask 'debug', tasks.debug
     grunt.registerTask 'preview', tasks.preview
