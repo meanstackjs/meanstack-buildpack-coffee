@@ -448,7 +448,11 @@ module.exports = (projectDir, grunt, master) ->
           debug: true
           dumpfile: 'public/<%= pkg.name %>/assets.json'
     vhosted:
-      dir: 'vhosts'
+      vhosts:
+        patterns: [
+          'vhosts/*/package.json',
+          'plugins/*/package.json'
+        ]
 
   name = buildpack.config.pkg.name.replace '-', '.'
   buildpack.config.ngtemplates = {}
