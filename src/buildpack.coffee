@@ -1,6 +1,6 @@
 path = require 'path'
 fs = require 'fs'
-minimatch = require 'minimatch'
+glob = require 'glob'
 
 module.exports = (projectDir, grunt, master) ->
   reldir = path.relative(__dirname, projectDir)
@@ -32,6 +32,24 @@ module.exports = (projectDir, grunt, master) ->
     if slave
       fs.writeFileSync "#{master}/.tmp/reload", 'reload'
 
+  grunt.task.registerTask 'less-config', 'Configures less task.', ->
+    glob 'src/assets/**/*.less', sync: true, (err, files) ->
+      if err
+        grunt.fail.fatal err
+      for file in files
+        cfg = {}
+        cfg.files = {}
+        src = 'public/' + buildpack.config.pkg.name + '/' +  path.relative('src/assets', file)
+        dest = src.replace('.less', '.css')
+        cfg.files[dest] = src
+        cfg.options = {}
+        cfg.options.sourceMap = true
+        cfg.options.ieCompat = true
+        cfg.options.sourceMapFilename = dest + '.map'
+        cfg.options.sourceMapBasepath = ''
+        cfg.options.sourceMapRootpath = '/'
+        buildpack.config.less[file] = cfg
+
   buildpack = {}
 
   buildpack.npmtasks = [
@@ -61,6 +79,7 @@ module.exports = (projectDir, grunt, master) ->
 
   buildpack.tasks.develop = [
     'clean:build',
+    'less-config',
     'read-assets',
     'copy:assets',
     'copy:server-views',
@@ -78,6 +97,7 @@ module.exports = (projectDir, grunt, master) ->
 
   buildpack.tasks.debug = [
     'clean:build',
+    'less-config',
     'read-assets',
     'copy:assets',
     'copy:server-views',
@@ -95,6 +115,7 @@ module.exports = (projectDir, grunt, master) ->
 
   buildpack.tasks.preview = [
     'clean:build',
+    'less-config',
     'read-assets',
     'copy:assets',
     'copy:server-views',
@@ -106,6 +127,8 @@ module.exports = (projectDir, grunt, master) ->
     'coffee:server',
     'coffeelint:angular',
     'coffee:angular',
+    'copy:angular-coffee',
+    'replace',
     'ngtemplates',
     'easyassets:version-js',
     'uglify:production',
@@ -118,6 +141,7 @@ module.exports = (projectDir, grunt, master) ->
   buildpack.tasks.install = [
     'vhosted',
     'clean:build',
+    'less-config',
     'read-assets',
     'copy:assets',
     'copy:server-views',
@@ -129,6 +153,8 @@ module.exports = (projectDir, grunt, master) ->
     'coffee:server',
     'coffeelint:angular',
     'coffee:angular',
+    'copy:angular-coffee',
+    'replace',
     'ngtemplates',
     'easyassets:version-js',
     'uglify:production',
@@ -250,14 +276,15 @@ module.exports = (projectDir, grunt, master) ->
           spawn: false
           livereload: not slave
       'less':
-        files: ['src/assets/less/**/*.less']
-        tasks: ['less', 'reload-browser']
+        files: ['src/assets/**/*.less']
+        tasks: ['copy:assets', 'less', 'reload-browser']
         options:
           spawn: false
           livereload: not slave
       'assets':
         files: [
           'src/assets/**/*.*',
+          '!src/assets/**/*.less',
           '!src/assets/assets.json'
         ]
         tasks: ['copy:assets', 'reload-browser']
@@ -363,11 +390,6 @@ module.exports = (projectDir, grunt, master) ->
           compress:
             drop_console: true
         files: '<%= assets.js %>'
-      'development':
-        options:
-          compress:
-            drop_console: false
-        files: '<%= assets.js %>'
     replace:
       'sourcemaps':
         src: ['public/<%= pkg.name %>/js/**/*.js.map']
@@ -377,17 +399,14 @@ module.exports = (projectDir, grunt, master) ->
           to: ''
         ]
     less:
-      'assets':
+      'watch':
         options:
-          paths: ['public/']
           sourceMap: true
-          outputSourceFiles: true
           ieCompat: true
-        expand: true
-        cwd: 'src/assets/'
-        src: '**/*.less'
-        dest: 'public/<%= pkg.name %>/'
-        ext: '.css'
+          sourceMapFilename: ''
+          sourceMapBasepath: ''
+          sourceMapRootpath: '/'
+        files: {}
     cssmin:
       'easyassets':
         files: '<%= assets.css %>'
@@ -493,8 +512,13 @@ module.exports = (projectDir, grunt, master) ->
         buildpack.config.copy['angular-views'].files[0].cwd, filepath
 
     else if target is 'less'
-      buildpack.config.less['assets'].src = path.relative \
-        buildpack.config.less['assets'].cwd, filepath
+      buildpack.config.copy['assets'].files[0].src = path.relative \
+      buildpack.config.copy['assets'].files[0].cwd, filepath
+      src = 'public/' + buildpack.config.pkg.name + '/' +  path.relative('src/assets', filepath)
+      dest = src.replace('.less', '.css')
+      buildpack.config.less['watch'].files = {}
+      buildpack.config.less['watch'].files[dest] = src
+      buildpack.config.less['watch'].options.sourceMapFilename = dest + '.map'
 
     else if target is 'assets'
       buildpack.config.copy['assets'].files[0].src = path.relative \
