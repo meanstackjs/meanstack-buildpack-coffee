@@ -379,14 +379,14 @@ module.exports = (projectDir, grunt, master) ->
     less:
       'assets':
         options:
-          paths: ['src/assets/less/', 'public/<%= pkg.name %>/vendor/']
+          paths: ['public/']
           sourceMap: true
           outputSourceFiles: true
           ieCompat: true
         expand: true
-        cwd: 'src/assets/less/'
+        cwd: 'src/assets/'
         src: '**/*.less'
-        dest: 'public/<%= pkg.name %>/css/'
+        dest: 'public/<%= pkg.name %>/'
         ext: '.css'
     cssmin:
       'easyassets':
