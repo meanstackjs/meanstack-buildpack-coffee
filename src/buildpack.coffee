@@ -398,15 +398,7 @@ module.exports = (projectDir, grunt, master) ->
           from: /\s*.*?sourceRoot.*?\,/g
           to: ''
         ]
-    less:
-      'watch':
-        options:
-          sourceMap: true
-          ieCompat: true
-          sourceMapFilename: ''
-          sourceMapBasepath: ''
-          sourceMapRootpath: '/'
-        files: {}
+    less: {}
     cssmin:
       'easyassets':
         files: '<%= assets.css %>'
@@ -516,9 +508,19 @@ module.exports = (projectDir, grunt, master) ->
       buildpack.config.copy['assets'].files[0].cwd, filepath
       src = 'public/' + buildpack.config.pkg.name + '/' +  path.relative('src/assets', filepath)
       dest = src.replace('.less', '.css')
-      buildpack.config.less['watch'].files = {}
-      buildpack.config.less['watch'].files[dest] = src
-      buildpack.config.less['watch'].options.sourceMapFilename = dest + '.map'
+
+      if not buildpack.config.less['recompile']?
+        buildpack.config.less = {}
+        buildpack.config.less['recompile'] = {}
+        buildpack.config.less['recompile'].options = {}
+        buildpack.config.less['recompile'].options.sourceMap = true
+        buildpack.config.less['recompile'].options.ieCompat = true
+        buildpack.config.less['recompile'].options.sourceMapBasepath = ''
+        buildpack.config.less['recompile'].options.sourceMapRootpath = '/'
+
+      buildpack.config.less['recompile'].files = {}
+      buildpack.config.less['recompile'].files[dest] = src
+      buildpack.config.less['recompile'].options.sourceMapFilename = dest + '.map'
 
     else if target is 'assets'
       buildpack.config.copy['assets'].files[0].src = path.relative \
