@@ -49,6 +49,8 @@ module.exports = (projectDir, grunt, master) ->
         cfg.options.sourceMapBasepath = ''
         cfg.options.sourceMapRootpath = '/'
         buildpack.config.less[file] = cfg
+      if files.length is 0
+        buildpack.config.less['empty'] = {}
 
   buildpack = {}
 
