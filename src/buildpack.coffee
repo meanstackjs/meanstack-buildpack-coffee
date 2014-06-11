@@ -33,10 +33,8 @@ module.exports = (projectDir, grunt, master) ->
       fs.writeFileSync "#{master}/.tmp/reload", 'reload'
 
   grunt.task.registerTask 'less-config', 'Configures less task.', ->
-    glob 'src/assets/**/*.less', sync: true, (err, files) ->
-      if err
-        grunt.fail.fatal err
-      for file in files
+    files = grunt.file.expand 'src/assets/**/*.less'
+    for file in files
         cfg = {}
         cfg.files = {}
         src = 'public/' + buildpack.config.pkg.name + '/' +  path.relative('src/assets', file)
@@ -69,8 +67,7 @@ module.exports = (projectDir, grunt, master) ->
     'grunt-angular-templates',
     'grunt-nodemon',
     'grunt-concurrent',
-    'grunt-vhosted',
-    'grunt-supervisor'
+    'grunt-vhosted'
   ]
 
   buildpack.tasks = {}
