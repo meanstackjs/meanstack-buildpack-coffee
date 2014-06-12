@@ -201,7 +201,11 @@ module.exports = (projectDir, grunt, master) ->
           if err
             grunt.fail.warn err
       grunt.task.run tasks.develop
-    grunt.registerTask 'debug', tasks.debug
+    grunt.registerTask 'debug', ->
+      tinylr.listen buildpack.livereload, (err) ->
+        if err
+          grunt.fail.warn err
+      grunt.task.run tasks.debug
     grunt.registerTask 'preview', tasks.preview
     grunt.registerTask 'install', tasks.install
     grunt.event.on 'watch', (action, filepath, target) ->
@@ -458,12 +462,7 @@ module.exports = (projectDir, grunt, master) ->
 
   buildpack.watch = (grunt, buildpack, action, filepath, target) ->
     changed = ['.tmp/reload']
-    if action is 'deleted'
-      if target is 'client' or target is 'assets'
-        grunt.task.run ['reload-assets']
-      return
-
-    if fs.lstatSync(path.resolve(filepath)).isDirectory()
+    if action isnt 'deleted' and fs.lstatSync(path.resolve(filepath)).isDirectory()
       return
 
     ext = path.extname filepath
@@ -483,6 +482,39 @@ module.exports = (projectDir, grunt, master) ->
         task = 'less'
       else
         task = 'assets'
+
+    if action is 'deleted'
+      if task is 'less'
+        dest = 'public/' + buildpack.config.pkg.name + '/' +  path.relative('src/assets', filepath)
+        dest = dest.replace('.less', '')
+        buildpack.config.clean['file'] = ["#{dest}.{less,css.map,css}"]
+        grunt.task.run ['clean:file', 'reload-assets']
+      else if task is 'assets'
+        dest = 'public/' + buildpack.config.pkg.name + '/' +  path.relative('src/assets', filepath)
+        buildpack.config.clean['file'] = [dest]
+        grunt.task.run ['clean:file', 'reload-assets']
+      else if task is 'angular-coffee'
+        dest = 'public/' + buildpack.config.pkg.name + '/js/' +  path.relative('src/client', filepath)
+        dest = dest.replace('.coffee', '')
+        buildpack.config.clean['file'] = ["#{dest}.{coffee,js.map,js}"]
+        grunt.task.run ['clean:file', 'reload-assets']
+      else if task is 'angular-views'
+        dest = 'public/' + buildpack.config.pkg.name + '/js/' +  path.relative('src/client', filepath)
+        buildpack.config.clean['file'] = [dest]
+        grunt.task.run ['clean:file', 'reload-assets']
+      else if task is 'server-views'
+        dest = 'lib/server/' +  path.relative('src/server', filepath)
+        buildpack.config.clean['file'] = [dest]
+        grunt.task.run ['clean:file', 'restart-nodemon']
+      else if task is 'server-coffee'
+        dest = 'lib/server/' +  path.relative('src/server', filepath)
+        dest = dest.replace('.coffee', '.js')
+        buildpack.config.clean['file'] = [dest]
+        grunt.task.run ['clean:file', 'restart-nodemon']
+      else
+        grunt.task.run ['reload-assets']
+      return
+
 
     if task is 'server-coffee'
       buildpack.config.coffeelint.server = filepath
