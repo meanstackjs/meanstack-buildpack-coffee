@@ -1,9 +1,13 @@
 path = require 'path'
 fs = require 'fs'
 glob = require 'glob'
+tinylr = require('tiny-lr')()
+request = require 'request'
 
 module.exports = (projectDir, grunt, master) ->
   reldir = path.relative(__dirname, projectDir)
+
+  changed = ['.tmp/reload']
 
   # Path to master
   if master?
@@ -32,6 +36,13 @@ module.exports = (projectDir, grunt, master) ->
     if slave
       fs.writeFileSync "#{master}/.tmp/reload", 'reload'
 
+  grunt.task.registerTask 'reload-assets', 'Reloads assets.', ->
+    grunt.task.run ['read-assets', 'easyassets:parse', 'restart-nodemon']
+
+  grunt.task.registerTask 'livereload', 'Livereloads browser.', ->
+    if not slave
+      request.post("http://localhost:#{buildpack.livereload}/changed", body: JSON.stringify(files: changed))
+
   grunt.task.registerTask 'less-config', 'Configures less task.', ->
     files = grunt.file.expand 'src/assets/**/*.less'
     for file in files
@@ -51,6 +62,8 @@ module.exports = (projectDir, grunt, master) ->
         buildpack.config.less['empty'] = {}
 
   buildpack = {}
+
+  buildpack.livereload = tinylr.options.port
 
   buildpack.npmtasks = [
     'grunt-contrib-copy',
@@ -163,11 +176,9 @@ module.exports = (projectDir, grunt, master) ->
   ]
 
   # Build
-  buildpack.build = (config, tasks) ->
-    if not config?
-      config = buildpack.config
-    if not tasks?
-      tasks = buildpack.tasks
+  buildpack.build = () ->
+    config = buildpack.config
+    tasks = buildpack.tasks
     grunt.initConfig buildpack.config
 
     # Load NPM tasks
@@ -185,6 +196,10 @@ module.exports = (projectDir, grunt, master) ->
       if slave
         tasks.develop.splice tasks.develop.indexOf('concurrent:development'), 1
         tasks.develop.push 'watch'
+      else
+        tinylr.listen buildpack.livereload, (err) ->
+          if err
+            grunt.fail.warn err
       grunt.task.run tasks.develop
     grunt.registerTask 'debug', tasks.debug
     grunt.registerTask 'preview', tasks.preview
@@ -244,66 +259,33 @@ module.exports = (projectDir, grunt, master) ->
             NODE_ENV: 'production'
             PORT: '3000'
     watch:
-      'server-coffee':
-        files: ['src/server/**/*.coffee']
-        tasks: ['coffeelint:server', 'coffee:server', 'restart-nodemon']
+      'server':
+        files: ['src/server/**/*']
         options:
           spawn: false
           livereload: false
-      'server-views':
-        files: ['src/server/**/*.*', '!src/server/**/*.coffee']
-        tasks: ['copy:server-views', 'reload-browser']
+      'client':
+        files: ['src/client/**/*']
         options:
           spawn: false
-          livereload: not slave
-      'angular-coffee':
-        files: ['src/client/**/*.coffee']
-        tasks: [
-          'coffeelint:angular',
-          'coffee:angular',
-          'copy:angular-coffee',
-          'replace:sourcemaps',
-          'reload-browser'
-        ]
-        options:
-          spawn: false
-          livereload: not slave
-      'angular-views':
-        files: ['src/client/**/*.html']
-        tasks: ['copy:angular-views', 'reload-browser']
-        options:
-          spawn: false
-          livereload: not slave
-      'less':
-        files: ['src/assets/**/*.less']
-        tasks: ['copy:assets', 'less', 'reload-browser']
-        options:
-          spawn: false
-          livereload: not slave
+          livereload: false
       'assets':
-        files: [
-          'src/assets/**/*.*',
-          '!src/assets/**/*.less',
-          '!src/assets/assets.json'
-        ]
-        tasks: ['copy:assets', 'reload-browser']
+        files: ['src/assets/**/*', '!src/assets/assets.json']
         options:
           spawn: false
-          livereload: not slave
+          livereload: false
       'easyassets':
         files: ['src/assets/assets.json']
-        tasks: [
-          'read-assets',
-          'easyassets:parse',
-          'restart-nodemon'
-        ]
+        tasks: ['reload-assets']
         options:
           spawn: false
           livereload: false
-      'nodemon':
+      'reload':
         files: ['.tmp/reload']
+        tasks: ['livereload']
         options:
-          livereload: not slave
+          spawn: false
+          livereload: false
     coffee:
       'server':
         options:
@@ -475,20 +457,43 @@ module.exports = (projectDir, grunt, master) ->
     dest: 'public/<%= pkg.name %>/js/partials.js'
 
   buildpack.watch = (grunt, buildpack, action, filepath, target) ->
-    if target is 'server-coffee'
-      if fs.lstatSync(filepath).isDirectory()
-        buildpack.config.coffeelint.server = []
-        buildpack.config.coffee.server = []
-      else
-        buildpack.config.coffeelint.server = filepath
-        buildpack.config.coffee['server'].src = path.relative \
-          buildpack.config.coffee['server'].cwd, filepath
+    changed = ['.tmp/reload']
+    if action is 'deleted'
+      if target is 'client' or target is 'assets'
+        grunt.task.run ['reload-assets']
+      return
 
-    else if target is 'server-views'
+    if fs.lstatSync(path.resolve(filepath)).isDirectory()
+      return
+
+    ext = path.extname filepath
+
+    if target is 'client'
+      if ext is '.coffee'
+        task = 'angular-coffee'
+      else if ext is '.html'
+        task = 'angular-views'
+    else if target is 'server'
+      if ext is '.coffee'
+        task = 'server-coffee'
+      else
+        task = 'server-views'
+    else if target is 'assets'
+      if ext is '.less'
+        task = 'less'
+      else
+        task = 'assets'
+
+    if task is 'server-coffee'
+      buildpack.config.coffeelint.server = filepath
+      buildpack.config.coffee['server'].src = path.relative \
+        buildpack.config.coffee['server'].cwd, filepath
+
+    else if task is 'server-views'
       buildpack.config.copy['server-views'].files[0].src = path.relative \
         buildpack.config.copy['server-views'].files[0].cwd, filepath
 
-    else if target is 'angular-coffee'
+    else if task is 'angular-coffee'
       buildpack.config.coffeelint.angular = filepath
       buildpack.config.coffee['angular'].src = path.relative \
         buildpack.config.coffee['angular'].cwd, filepath
@@ -498,15 +503,16 @@ module.exports = (projectDir, grunt, master) ->
         path.relative('src/client/', filepath).replace('.coffee', '.js.map')
       buildpack.config.replace['sourcemaps'].src = mapfilepath
 
-    else if target is 'angular-views'
+    else if task is 'angular-views'
       buildpack.config.copy['angular-views'].files[0].src = path.relative \
         buildpack.config.copy['angular-views'].files[0].cwd, filepath
 
-    else if target is 'less'
+    else if task is 'less'
       buildpack.config.copy['assets'].files[0].src = path.relative \
       buildpack.config.copy['assets'].files[0].cwd, filepath
       src = 'public/' + buildpack.config.pkg.name + '/' +  path.relative('src/assets', filepath)
       dest = src.replace('.less', '.css')
+      changed = [dest]
 
       if not buildpack.config.less['recompile']?
         buildpack.config.less = {}
@@ -521,11 +527,57 @@ module.exports = (projectDir, grunt, master) ->
       buildpack.config.less['recompile'].files[dest] = src
       buildpack.config.less['recompile'].options.sourceMapFilename = dest + '.map'
 
-    else if target is 'assets'
+    else if task is 'assets'
       buildpack.config.copy['assets'].files[0].src = path.relative \
         buildpack.config.copy['assets'].files[0].cwd, filepath
 
-    if action is 'added' or action is 'deleted'
-      fs.writeFileSync '.tmp/restart', 'restart'
+    # Run tasks
+    tasks = []
+    if task is 'angular-coffee'
+      tasks = [
+        'coffeelint:angular',
+        'coffee:angular',
+        'copy:angular-coffee',
+        'replace:sourcemaps',
+        'reload-browser',
+        'livereload'
+      ]
+    else if task is 'angular-views'
+      tasks = [
+        'copy:angular-views',
+        'reload-browser',
+        'livereload'
+      ]
+    else if task is 'server-coffee'
+      tasks = [
+        'coffeelint:server',
+        'coffee:server',
+        'restart-nodemon'
+      ]
+    else if task is 'server-views'
+      tasks = [
+        'copy:server-views',
+        'reload-browser',
+        'livereload'
+      ]
+    else if task is 'less'
+      tasks = [
+        'copy:assets',
+        'less',
+        'reload-browser',
+        'livereload'
+      ]
+    else if task is 'assets'
+      tasks = [
+        'copy:assets',
+        'reload-browser',
+        'livereload'
+      ]
+
+    if action is 'added'
+      if target is 'assets' or target is 'client'
+        tasks.splice tasks.length - 1, 1, 'reload-assets'
+
+    grunt.task.run tasks
 
   return buildpack
