@@ -1,6 +1,5 @@
 path = require 'path'
 fs = require 'fs'
-glob = require 'glob'
 tinylr = require('tiny-lr')()
 request = require 'request'
 
