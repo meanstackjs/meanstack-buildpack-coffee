@@ -5,6 +5,10 @@ request = require 'request'
 module.exports = (projectDir, grunt, master) ->
   reldir = path.relative(__dirname, projectDir)
 
+  # Prevent tasks to exit
+  grunt.warn = grunt.fail.warn = (warning) ->
+    grunt.log.error warning
+
   # Path to master
   if master?
     master = path.relative(projectDir, path.resolve(master))
