@@ -520,6 +520,8 @@ module.exports = (projectDir, grunt, master) ->
         parse: true
         options:
           debug: false
+          value:
+            prefix: '/'
           dumpfile: 'public/<%= pkg.name %>/assets.json'
           ignore: []
           replace: [
