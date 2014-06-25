@@ -546,7 +546,7 @@ module.exports = (projectDir, grunt) ->
     buildpack.config.ngtemplates[name] = {}
     buildpack.config.ngtemplates[name] =
       options:
-        prefix: "public/#{packet}/client/"
+        prefix: "/public/#{packet}/client/"
       cwd: "public/#{packet}/client/"
       src: '**/*.html'
       dest: "public/#{packet}/client/partials.js"
