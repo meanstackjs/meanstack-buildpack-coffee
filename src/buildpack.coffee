@@ -164,9 +164,18 @@ module.exports = (projectDir, grunt) ->
     # Read and merge assets
     grunt.registerTask 'read-assets', 'Loads asset config.', ->
       assetPaths = grunt.file.expand 'src/*/assets/assets.json'
-      assetObject = {}
+      assetObject =
+        js: {}
+        css: {}
+        other: {}
       for assetFile in assetPaths
-        assetObject = _.assign assetObject, grunt.file.readJSON(assetFile)
+        data = grunt.file.readJSON(assetFile)
+        if data.js?
+          assetObject.js = _.assign assetObject.js, data.js
+        if data.css?
+          assetObject.css = _.assign assetObject.css, data.css
+        if data.other?
+          assetObject.other = _.assign assetObject.other, data.other
       buildpack.config.assets = assetObject
 
     # Register tasks
