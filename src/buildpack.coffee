@@ -125,6 +125,7 @@ module.exports = (projectDir, grunt) ->
   ]
 
   buildpack.tasks.install = [
+    'copy:init',
     'vhosted',
     'clean:build',
     'less-config',
@@ -183,6 +184,7 @@ module.exports = (projectDir, grunt) ->
     grunt.registerTask 'init', tasks.init
     grunt.registerTask 'develop', tasks.develop
     grunt.registerTask 'debug', tasks.debug
+    grunt.registerTask 'watch', ['concurrent:development']
     grunt.registerTask 'preview', tasks.preview
     grunt.registerTask 'install', tasks.install
 
@@ -204,7 +206,7 @@ module.exports = (projectDir, grunt) ->
           logConcurrentOutput: true
     nodemon:
       'development':
-        script: 'server.coffee'
+        script: 'server.js'
         options:
           watch: ['.tmp/restart']
           delay: 0
@@ -376,6 +378,7 @@ module.exports = (projectDir, grunt) ->
       'server':
         options:
           bare: true
+          sourceMap: true
         expand: true
         cwd: 'src/'
         src: ['*/server/**/*.coffee', '*.coffee']
@@ -397,6 +400,13 @@ module.exports = (projectDir, grunt) ->
       'server': ['src/*/server/**/*.coffee']
       'angular': ['src/*/client/**/*.coffee']
     copy:
+      'init':
+        files: [
+          expand: true
+          cwd: 'src/'
+          src: ['*/package.json', '*/README.*']
+          dest: 'lib/'
+        ]
       'server-views':
         files: [
           expand: true
@@ -436,11 +446,11 @@ module.exports = (projectDir, grunt) ->
         '.tmp/'
       ]
       'build': [
-        'lib/',
+        'lib/*.*',
+        'lib/*/server/**/*',
         'public/*/**/*',
         '!public/*/vendor/**',
-        '!public/*/other/**',
-        '!public/*.*'
+        '!public/*/other/**'
       ]
       'release': [
         'public/*/**/*',
@@ -516,7 +526,7 @@ module.exports = (projectDir, grunt) ->
           debug: false
           value:
             prefix: '/'
-          dumpfile: 'public/assets.json'
+          dumpfile: '.tmp/assets.json'
           ignore: []
           replace: [
             ignore: ['public/vendor/**/*']
@@ -530,11 +540,11 @@ module.exports = (projectDir, grunt) ->
           debug: true
           value:
             prefix: '/'
-          dumpfile: 'public/assets.json'
+          dumpfile: '.tmp/assets.json'
     vhosted:
       vhosts:
         src: [
-          'src/*/package.json'
+          'lib/*/package.json'
         ]
 
   buildpack.config.ngtemplates = {}
