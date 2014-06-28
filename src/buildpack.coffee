@@ -438,7 +438,7 @@ module.exports = (projectDir, grunt) ->
       'build': [
         'lib/',
         'public/*/**/*',
-        '!public/vendor/**',
+        '!public/*/vendor/**',
         '!public/*/other/**',
         '!public/*.*'
       ]
@@ -446,7 +446,7 @@ module.exports = (projectDir, grunt) ->
         'public/*/**/*',
         '!public/*/*.*',
         '!public/*/release/**',
-        '!public/vendor/**',
+        '!public/*/vendor/**',
         '!public/*/other/**',
         '!public/*.*'
       ]
@@ -533,9 +533,8 @@ module.exports = (projectDir, grunt) ->
           dumpfile: 'public/assets.json'
     vhosted:
       vhosts:
-        patterns: [
-          'vhosts/*/package.json',
-          'plugins/*/package.json'
+        src: [
+          'src/*/package.json'
         ]
 
   buildpack.config.ngtemplates = {}
