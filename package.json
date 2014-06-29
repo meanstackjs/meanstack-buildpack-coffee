@@ -47,7 +47,7 @@
     "grunt-text-replace": "0.3.x",
     "grunt-ngmin": "0.0.x",
     "grunt-angular-templates": "0.5.x",
-    "grunt-vhosted": "git+https://github.com/jzvelc/grunt-vhosted.git"
+    "grunt-npminstaller": "git+https://github.com/jzvelc/grunt-npminstaller.git"
   },
   "devDependencies": {
     "coffee-script": "1.7.x"

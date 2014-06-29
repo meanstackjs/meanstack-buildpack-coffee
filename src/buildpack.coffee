@@ -54,7 +54,7 @@ module.exports = (projectDir, grunt) ->
     'grunt-angular-templates',
     'grunt-nodemon',
     'grunt-concurrent',
-    'grunt-vhosted'
+    'grunt-npminstaller'
   ]
 
   buildpack.tasks = {}
@@ -126,7 +126,11 @@ module.exports = (projectDir, grunt) ->
 
   buildpack.tasks.install = [
     'copy:init',
-    'vhosted',
+    'npminstaller'
+  ]
+
+  buildpack.tasks.deploy = [
+    'install',
     'clean:build',
     'less-config',
     'read-assets',
@@ -187,6 +191,7 @@ module.exports = (projectDir, grunt) ->
     grunt.registerTask 'watch', ['concurrent:development']
     grunt.registerTask 'preview', tasks.preview
     grunt.registerTask 'install', tasks.install
+    grunt.registerTask 'deploy', tasks.deploy
 
   # Configuration
   buildpack.config =
@@ -404,7 +409,9 @@ module.exports = (projectDir, grunt) ->
         files: [
           expand: true
           cwd: 'src/'
-          src: ['*/package.json', '*/README.*']
+          src: ['*/*']
+          filter: 'isFile'
+          dot: true
           dest: 'lib/'
         ]
       'server-views':
@@ -541,8 +548,8 @@ module.exports = (projectDir, grunt) ->
           value:
             prefix: '/'
           dumpfile: '.tmp/assets.json'
-    vhosted:
-      vhosts:
+    npminstaller:
+      install:
         src: [
           'lib/*/package.json'
         ]
